@@ -6,7 +6,7 @@ In this first post, I’d like to provide a brief overview of Redux. If you are 
 
 If you’re new to Redux or would like a refresher on Redux, please read on.
 
-As web app’s get more complex, we unavoidably have more app states that we need to keep track of. However, this is difficult! when a view updates a model, it might trigger another model to update, which might then cause another view to update… On top of that, some of these changes are very likely asynchronous. Very quickly, our human brain will no longer be able to keep track of what’s actually going on. Losing control over the when, why, and how of the app state, by all means, should be avoided as it easily leads to code that’s hard to debug, extend, and maintain.
+As web apps get more complex, we unavoidably have more app states that we need to keep track of. However, this is difficult! when a view updates a model, it might trigger another model to update, which might then cause another view to update… On top of that, some of these changes are very likely asynchronous. Very quickly, our human brain will no longer be able to keep track of what’s actually going on. Losing control over the when, why, and how of the app state, by all means, should be avoided as it easily leads to code that’s hard to debug, extend, and maintain.
 
 Redux is a lightweight, extendable, and fantastically designed open source library for managing the ever-changing app state. Much like how the three paradigms of programming (procedural, OO, and functional) help make programmers’ lives simpler, Redux is able to make state management simple (not necessarily easy) not by giving us more power but by restricting how we manage our state. This can be reflected in the three principles of Redux:
 
