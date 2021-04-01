@@ -1,10 +1,12 @@
+## Intro
+
 Welcome back to the second post of the Reading Redux Source Code series. As mentioned in [Part 1](./Part%201%20–%20Intro.md) of this series, this second post will be about `createStore()`.
 
 This series, as you've probably guessed it, is about my journey in reading the Redux source code. You might be wondering why I'm writing it in this way, not starting with the overall architecture/structure, but instead with this particular function. 
 
-The truth is that's exactly how I read the source code, starting from a function that I'm interested in and let it guide me uncover the app structure. This way, I learn something about the source code pretty quickly, which motivates me to keep digging. 
+The truth is that's exactly how I read the source code, starting from a function that I'm interested in and let it guide me uncover the app structure. This way, I get to learn something about the source code pretty quickly, which motivates me to keep digging. 
 
-I must say that if I were to teach someone Redux or its source code in a limited amount of time, I probably wouldn't do it this way. It's lengthy and since we are basically "going with the wind" it's also hard to keep track of things. But I think it's still valid and in fact very important to document my learning journey honestly. Sometimes, the raw and the messy are just as valuable. 
+I must say that if I were to teach someone Redux or its source code in a limited amount of time, I probably wouldn't do it this way. It's lengthy and since we are basically "going with the flow" it might be hard to keep track of things. But I think it's still valid and in fact very important to document my learning journey this way. Sometimes, the raw and the messy are just as valuable. 
 
 Anyways, with that out the way, let's dive in. 
 
@@ -12,7 +14,7 @@ Anyways, with that out the way, let's dive in.
 
 On a high level, we know that `createStore` creates a Redux `store` that holds the complete state of our app. We must give `createStore` a reducer. Optionally, we can provide `preloadedState` and/or an `enhancer`. The `preloadedState` will be used as the initial state and the `enhancer` is a function that can be used to enhance the `store` with third-party capabilities. 
 
-The `store` object returned from `createStore` holds the state of our application. This `store` object has methods that we can use to get the current state, update the state, and attach observers that will be invoked when the state gets updated.
+The `store` object returned from `createStore` holds the state of our application. This `store` object has methods that we can use to get the current state, update the state, and attach observers that will be invoked when an action is dispatched against the `store` object.
 
 Structurally, `createStore` is a factory function. It declares the internal states and defines the methods for `store`,  put them together to create and return a `store` object.
 
@@ -20,7 +22,7 @@ You can take a look at the official [Redux API reference](https://redux.js.org/a
 
 ## `createStore` function signature
 
-After forking, downloading, and opening up the Redux repo in VS Code, I found `createStore` in `/src/createStore.ts` by searching for it in the code editor.  Just take a look at this function signature!
+After forking, downloading, and opening up the Redux project in VS Code, we can find `createStore` in `/src/createStore.ts` by searching for it in the code editor.  Just take a look at this function signature!
 
 ```typescript
 export default function createStore<
@@ -62,7 +64,7 @@ export default function createStore(reducer, preloadedState, enhancer)
 
 things have really "escalated"!
 
-If you're familiar with TypeScript, by looking at the first 30 or so lines of code in the function body of `createStore()`, you can already get a good sense of what the function signature is trying to achieve:
+If you're familiar with TypeScript, by looking at the first 30 or so lines of code in the function body of `createStore()`, you can already get a pretty good sense of what the function signature is trying to achieve:
 
 ```typescript
 if (
@@ -121,7 +123,7 @@ export interface Action<T = any> {
 }
 ```
 
-An action is a plain object that has a property whose name is `type` and whose value could any type.
+An action is a plain object that has a property whose name is `type` and whose value can be of any type.
 
 `AnyAction`
 
@@ -131,7 +133,7 @@ export interface AnyAction extends Action {
 }
 ```
 
-The `AnyAction` interface extends `Action` and allows any additional properties to be added. These extra properties are the information that we attach to an action. 
+The `AnyAction` interface extends `Action` to allow additional properties be added. These extra properties are the information that we attach to an action. 
 
 `Reducer`
 
@@ -142,7 +144,7 @@ export type Reducer<S = any, A extends Action = AnyAction> = (
 ) => S
 ```
 
-We can see from the definition above that a reducer is indeed a function that takes a state and an action and returns another state. 
+We can see from the definition above that a reducer is indeed a function that takes a state, an action, and returns a (new) state.
 
 `Store`:
 
@@ -167,13 +169,13 @@ export interface Store<
 }
 ```
 
-In TypeScript, the keyword `interface` is used to define the structure of an object. An interface is made up of property names and their respective types. Just like generic functions, we can also make a generic object that conforms to an interface.
+In TypeScript, the keyword `interface` is used to define the structure of an object. An interface is made up of property names and their respective types. Just like functions, interfaces can be generic as well.
 
-Here we can see that by default, a `store` object can hold state of any type and has methods `dispatch`, `getState`, `subscribe`, and `replaceReducer`. Lastly, it conforms to the Observable proposal, which we can ignore. 
+Here we can see that, by default, a `store` object can hold state of any type and has methods `dispatch`, `getState`, `subscribe`, and `replaceReducer`. Lastly, it conforms to the Observable proposal, which we can safely ignore. 
 
 All these methods are very well named and we can easily guess what they are supposed to do. 
 
-Lastly, for `dispatch`, we see that is needs to take an action and returns the action.
+Lastly, for `dispatch`, we see that it needs to take an action and return an action.
 
 ```typescript
 export interface Dispatch<A extends Action = AnyAction> {
@@ -507,11 +509,13 @@ const store = ({
 return store
 ```
 
-All the methods defined and explained above are passed as the methods of the `store` object. 
+All the methods defined and explained above are passed as the methods of the `store` object. Note that, while these methods are used to create the `store` object, which is the return value, they still reference the internal states in `createStore`. Again, this is possible because of closure. 
 
+## Conclusion
 
+That was quite a long read. I thank you very much for taking the time to read this post. To recap, the `createStore` returns a `store` object, against which, we can dispatch actions, attach listeners, and obtain the current state of the world. 
 
-
+In the next post, I will write about how middlewares are applied in Redux. Take care and see you soon!
 
 
 
