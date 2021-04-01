@@ -1,4 +1,4 @@
-Raw & Honest, my journey is reading the Redux source code. I hope you enjoy the series and that it's worth of your time. To reach me and/or provide your honest feedback: ryan.weihao.di@gmail.com.
+Raw and honest, this repository documents my journey in reading the Redux source code. I hope you enjoy the series and that it's worth of your time. To reach me and/or provide your honest feedback: ryan.weihao.di@gmail.com.
 
 
 
