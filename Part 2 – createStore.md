@@ -1,4 +1,4 @@
-Welcome back to the second post of the Reading Redux Source Code series. As mentioned in [Part 1] of this series, this second post will be about `createStore()`.
+Welcome back to the second post of the Reading Redux Source Code series. As mentioned in [Part 1](./Part%201%20–%20Intro.md) of this series, this second post will be about `createStore()`.
 
 This series, as you've probably guessed it, is about my journey in reading the Redux source code. You might be wondering why I'm writing it in this way, not starting with the overall architecture/structure, but instead with this particular function. 
 
@@ -109,7 +109,7 @@ I recommend you take a look at the links provided above. When you've got a good 
 
 ### Related Types
 
-The first step that I took, after learning more about generics and function overloading in TypeScript, was to look up the type definitions of all the types that appeared in the overwhelming looking signature. I was in particular very interested in the definition of `Store`. In VS Code for mac, we can go to the definitions by holding the command key and click on the function, class, type. It should be very similar for Windows users. 
+The first step that I took, after learning more about generics and function overloading in TypeScript, was to look up the type definitions of all the types that appeared in the overwhelming looking signature. I was in particular very interested in the definition of `Store`. In VS Code for mac, we can go to the definitions by holding the "option" key and click on the function, class, type. It should be very similar for Windows users. 
 
 Here are some of the more relevant ones (I've decided to ignore `StoreEnhancer` for now).
 
@@ -425,4 +425,109 @@ function dispatch(action: A) {
   return action;
 }
 ```
+
+In Redux, `dispatch` is a method on the `store` object and is used to dispatch an action that's used by the `store` object to change the underlying state tree. When an action is dispatched, we also want to make sure all the listeners are invoked. 
+
+The `dispatch` method first checks that the given `action` is a plain object. Then it checks to see if `type` proprety is defined in the given `action` object. If all is well, it will try to dispatch the action using the `currentReducer` with `currentState` and `action` as arguments to the current reducer. The returned state will be the new state. Regardless of how successful the `currentReducer` is at producing a new state, the `dispatch` method will set `isDipatching` back to `false` again. 
+
+Then, `currentListeners` is asked to point at the listeners that `nextListeners` is pointing at. We then invoke these listeners one by one in sequence. 
+
+While JavaScript is single threaded, there is no guarantee that the listeners must be synchrnous and some of them might unsubscribe themselves once they are invoked, we always need to make the listeners array mutable. That's the whole reason behind the `nextListeners`, `currentListeners`, and `ensureCanMutateNextListners` complication. 
+
+Note that the given `action` is returned here. This is competely for the sake of convenience. When a middleware is appied, it might wrap `dispatch`. And in that case, it's okay for the wrapped `dispatch` to return something other than the givne action. For example, a `Promise` might be returned.  
+
+
+
+Finally, we have the method `replaceReducer`, which is used to replace the current reducer:
+
+```typescript
+function replaceReducer<NewState, NewActions extends A>(
+	nextReducer: Reducer<NewState, NewActions>
+): Store<ExtendState<NewState, StateExt>, NewActions, StateExt, Ext> & Ext {
+  if (typeof nextReducer !== 'function') {
+    throw new Error('Expected the nextReducer to be a function.')
+  }
+
+  // TODO: do this more elegantly
+  ;((currentReducer as unknown) as Reducer<
+    NewState,
+    NewActions
+  >) = nextReducer
+
+  // This action has a similar effect to ActionTypes.INIT.
+  // Any reducers that existed in both the new and old rootReducer
+  // will receive the previous state. This effectively populates
+  // the new state tree with any relevant data from the old one.
+  dispatch({ type: ActionTypes.REPLACE } as A)
+  // change the type of the store by casting it to the new store
+  return (store as unknown) as Store<
+    ExtendState<NewState, StateExt>,
+    NewActions,
+    StateExt,
+    Ext
+  > &
+    Ext
+}
+```
+
+I always had this false idea that a well-known open source project must be near if not perfect. Well designed and documented as Redux is, it is still a work in progress. It's weirdly comforting to see the "TODO" message in this method. 
+
+Oh, in case I haven't explained it already, the `&` operator in TypeScript in a type position means type intersection. It combines two or more types into a single type that has all the features we need. So, for the returned `store` object, it is of type `Store` and `Ext`, the provided extension object, which by default is just a plain object.
+
+ 
+
+We'll just skip pass the `observable` method, which you can read about [here](https://github.com/tc39/proposal-observabl).
+
+
+
+Right before `createStore` returns a `store` object, it invokes the `dispatch` method for the first time:
+
+```typescript
+dispatch({ type: ActionTypes.INIT } as A)
+```
+
+As the comment clearly states:
+
+> When a store is created, an "INIT" action is dispatched so that every reducer returns their initial state. This effectively populates the initial state tree.
+
+This is as good as it gets! Clear code with clear comments!
+
+
+
+Finally, we have reached the end of the `createStore` function:
+
+```typescript
+const store = ({
+  dispatch: dispatch as Dispatch<A>,
+  subscribe,
+  getState,
+  replaceReducer,
+  [$$observable]: observable
+} as unknown) as Store<ExtendState<S, StateExt>, A, StateExt, Ext> & Ext
+return store
+```
+
+All the methods defined and explained above are passed as the methods of the `store` object. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
