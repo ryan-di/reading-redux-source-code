@@ -163,7 +163,7 @@ We know that an interface specifies the structure of an object. Additionally, in
 
 
 
-**What is this `<infer A> `?**
+As for the whole `action: D extends Dispatch<infer A> ? A : never`, it is the TypeScript support for conditional typing. Semantically, this is saying that if `D` extends `Dispatch<infer A>`, then `action` is of type `A`; otherwise, `action` is of type `never`. Given the meaning of `never` in TypeScript, this is saying that `D` has to extend `Dispatch<infer A>`. 
 
 
 
@@ -262,9 +262,77 @@ Now, as for the omitted implementation details:
 
 1. The provided `createStore` argument is used to create a `store` object, which will later have its `dispatch` method modified/wrapped. The modified `store` object is the return value when the returned function is invoked with a `reducer` and optionally a `preloadedState` as arguments.
 2.  A temporary `dispatch` method is created, which if invoked while the current `middleware` is being constructed will throw an error.
-3. Then we use the `store`'s `getState` and `dispatch` methods to create a `middlewareAPI`, which will be used to invoke each `middleware`: `middleware(middlewareAPI)`.
+3. Then we use the `store`'s `getState` and `dispatch` methods to create a `middlewareAPI`, which will be used to invoke each `middleware`: `middleware(middlewareAPI)`, which again returns a function of interface `Dispatch`.
 4. The `chain`  created by `middlewares. map( middleware => middleware( middlewareAPI))` is used to create the final `dispatch` method.
-5. The final `dispatch` method is created using `compose<typeof dispatch>(...chain)(store.dispatch)`.
+5. The final `dispatch` method is created using `compose<typeof dispatch>(...chain)(store.dispatch)`, where the `compose` function is defined in `compose.ts`.
+
+
+
+**compose**
+
+```typescript
+export default function compose<R>(...funcs: Function[]): (...args: any[]) => R
+
+export default function compose(...funcs: Function[]) {
+  if (funcs.length === 0) {
+    // infer the argument type so it is usable in inference down the line
+    return <T>(arg: T) => arg
+  }
+
+  if (funcs.length === 1) {
+    return funcs[0]
+  }
+
+  return funcs.reduce((a, b) => (...args: any) => a(b(...args)))
+}
+```
+
+
+
+Just like function composition in math, where $(f \circ g)(x) = f(g(x))$, we can compose functions in programming languages as well. This `compose` function takes the a list of functions and combines them from right to left. Let's see what this means:
+
+- Say, we have a list of three functions `[f,g,h]`
+
+- `[f,g,h].reduce((a,b) => (...args: any) => a(b(...args)))`
+
+  1. `(f,g) => (...args) => f(g(...args))`
+
+  2. let's use `i` to denote the function `(...args) => f(g(...args))`, then we have `(i, h) => (...args) => i(h(...args))`, which when we plug `(...args) => f(g(...args))` back gives `(...args) => f(g(h(...args)))`
+  3. As there are no more functions left, the final return value is the function `(...args) => f(g(h(...args)))`
+
+
+
+```typescript
+const chain = middlewares.map(middleware => middleware(middlewareAPI))
+dispatch = compose<typeof dispatch>(...chain)(store.dispatch)
+```
+
+The composed function `compose<typeof dispatch>(...chain)` is invoked with the `store.dispatch` as an argument. It's really the last function in the `chain` that's provided the `store.dispatch` as input. It's return value is then used as input for the previous function in the `chain`, whose return value is used for the one before, and so on and so forth.  
+
+
+
+One of the implications of this, as noted in the API docs, is that when we have multiple middlewares that we wish to apply, we should put the potentially asynchronous ones before synchronous ones. Since the invocation order is from right to left. For instance, 'redux-thunk' should go before 'redux-devtools'. Consider this from the offcial API doc:
+
+```javascript
+let middleware = [a, b]
+if (process.env.NODE_ENV !== 'production') {
+  const c = require('some-debug-middleware')
+  const d = require('another-debug-middleware')
+  middleware = [...middleware, c, d]
+}
+
+const store = createStore(
+  reducer,
+  preloadedState,
+  applyMiddleware(...middleware)
+)
+```
+
+ 
+
+
+
+
 
 
 
