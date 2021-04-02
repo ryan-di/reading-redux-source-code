@@ -8,3 +8,5 @@ Raw and honest, this repository documents my journey in reading the Redux source
 
 [Part 2 – createStore](./Part%202%20–%20createStore.md)
 
+[Part 3 - middleware](./Part%203%20–%20middleware.md)
+
