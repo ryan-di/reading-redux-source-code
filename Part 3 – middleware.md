@@ -260,32 +260,40 @@ Now, as for the omitted implementation details:
 	}
 ```
 
-1. The provided `createStore` argument is used to create a `store` object, which will later have its `dispatch` method modified/wrapped. The modified `store` object is the return value when the returned function is invoked with a `reducer` and optionally a `preloadedState` as arguments.
+The provided `createStore` argument is used to create a `store` object, which will later have its `dispatch` method modified/wrapped. The modified `store` object is the return value when the returned function is invoked with a `reducer` and optionally a `preloadedState` as arguments.
 
-2.  A temporary `dispatch` method is created, which if invoked while the current `middleware` is being constructed will throw an error.
 
-3. Then we use the `store`'s `getState` and `dispatch` methods to create a `middlewareAPI`, which will be used to invoke each `middleware`: `middleware(middlewareAPI)`, which again returns a function of interface `Dispatch`.
 
-4. The `chain`  created by `middlewares. map( middleware => middleware( middlewareAPI))` is used to create the final `dispatch` method.
+A temporary `dispatch` method is created, which if invoked while the current `middleware` is being constructed will throw an error.
 
-5. The final `dispatch` method is created using `compose<typeof dispatch>(...chain)(store.dispatch)`, where the `compose` function is defined in `compose.ts`.
 
-   ```typescript
-   export default function compose<R>(...funcs: Function[]): (...args: any[]) => R
-   
-   export default function compose(...funcs: Function[]) {
-     if (funcs.length === 0) {
-       // infer the argument type so it is usable in inference down the line
-       return <T>(arg: T) => arg
-     }
-   
-     if (funcs.length === 1) {
-       return funcs[0]
-     }
-   
-     return funcs.reduce((a, b) => (...args: any) => a(b(...args)))
-   }
-   ```
+
+Then we use the `store`'s `getState` and `dispatch` methods to create a `middlewareAPI`, which will be used to invoke each `middleware`: `middleware(middlewareAPI)`, which again is a function that takes a `Dispatch` function and returns a (`Dispatch`) function `(action: Action) => any`. This really is not easy to grasp right away. Take your time.
+
+
+
+The `chain`  created by `middlewares. map( middleware => middleware( middlewareAPI))` is used to create the final `dispatch` method.
+
+
+
+The final `dispatch` method is created using `compose<typeof dispatch>(...chain)(store.dispatch)`, where the `compose` function is defined in `compose.ts`.
+
+```typescript
+export default function compose<R>(...funcs: Function[]): (...args: any[]) => R
+
+export default function compose(...funcs: Function[]) {
+  if (funcs.length === 0) {
+    // infer the argument type so it is usable in inference down the line
+    return <T>(arg: T) => arg
+  }
+
+  if (funcs.length === 1) {
+    return funcs[0]
+  }
+
+  return funcs.reduce((a, b) => (...args: any) => a(b(...args)))
+}
+```
 
 
 
@@ -307,7 +315,7 @@ const chain = middlewares.map(middleware => middleware(middlewareAPI))
 dispatch = compose<typeof dispatch>(...chain)(store.dispatch)
 ```
 
-The composed function `compose<typeof dispatch>(...chain)` is invoked with the `store.dispatch` as an argument. It's really the last function in the `chain` that's provided the `store.dispatch` as input. It's return value is then used as input for the previous function in the `chain`, whose return value is used for the one before, and so on and so forth.  
+The composed function `compose<typeof dispatch>(...chain)` is invoked with the `store.dispatch` as an argument. It's really the last function in the `chain` that's provided the `store.dispatch` as input. It's return value (which is a `Dispatch` function) is then used as input for the previous function in the `chain`, whose return value is used for the one before, and so on and so forth.  
 
 
 
@@ -330,49 +338,4 @@ const store = createStore(
 
  
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ 
