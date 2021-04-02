@@ -163,6 +163,10 @@ We know that an interface specifies the structure of an object. Additionally, in
 
 
 
+**What is this `<infer A> `?**
+
+
+
 As for `MiddlewareAPI`, we have:
 
 ```typescript
@@ -172,7 +176,7 @@ export interface MiddlewareAPI<D extends Dispatch = Dispatch, S = any> {
 }
 ```
 
- So an object is of `MiddlewareAPI` when it has two methods `dispatch` and `getState`.
+ So an object is a `MiddlewareAPI` when it has two methods `dispatch` and `getState`. 
 
 
 
@@ -198,7 +202,69 @@ const demo: Demo = demoAPI => {
 }
 ```
 
+
+
 ### `applyMiddleware` Body
+
+If we omit some implementation details, then structurally, we have: 
+
+```typescript 
+return (createStore:  StoreEnhancerStoreCreator) => <S, A extends AnyAction>(
+	reducer: Reducer<S, A>,
+  preloadedState: PreloadedState<S>
+) => {
+  // ...
+  return {
+    ...store,
+    dispatch
+  }
+}
+```
+
+Again, on a high level, we know that an enhancer is supposed to be returned by `applyMiddleware`. As we learned above, an enhancer is really just a function that takes a `StoreEnhancerStoreCreator` and returns a `StoreEnhancerStoreCreator`. As we can clearly see here, the `createStore` function itself is also of type `StoreEnhancerStoreCreator`. A `StoreEnhancerStoreCreator` takes a reducer and optionally a `preloadedState` and returns a new `Store` object.
+
+
+
+That's why an `enhancer` is used in the `createStore` like this:
+
+```typescript
+return enhancer(createStore)(
+  reducer,
+  preloadedState as PreloadedState<S>
+) as Store<ExtendState<S, StateExt>, A, StateExt, Ext> & Ext
+```
+
+
+
+Now, as for the omitted implementation details:
+
+```typescript
+  const store = createStore(reducer, preloadedState)
+  let dispatch: Dispatch = () => {
+    throw new Error(
+      'Dispatching while constructing your middleware is not allowed. ' +
+      'Other middleware would not be applied to this dispatch.'
+    )
+  }
+
+  const middlewareAPI: MiddlewareAPI = {
+    getState: store.getState,
+    dispatch: (action, ...args) => dispatch(action, ...args)
+  }
+  const chain = middlewares.map(middleware => middleware(middlewareAPI))
+  dispatch = compose<typeof dispatch>(...chain)(store.dispatch)
+
+	return {
+		...store,
+		dispatch
+	}
+```
+
+1. The provided `createStore` argument is used to create a `store` object, which will later have its `dispatch` method modified/wrapped. The modified `store` object is the return value when the returned function is invoked with a `reducer` and optionally a `preloadedState` as arguments.
+2.  A temporary `dispatch` method is created, which if invoked while the current `middleware` is being constructed will throw an error.
+3. Then we use the `store`'s `getState` and `dispatch` methods to create a `middlewareAPI`, which will be used to invoke each `middleware`: `middleware(middlewareAPI)`.
+4. The `chain`  created by `middlewares. map( middleware => middleware( middlewareAPI))` is used to create the final `dispatch` method.
+5. The final `dispatch` method is created using `compose<typeof dispatch>(...chain)(store.dispatch)`.
 
 
 
